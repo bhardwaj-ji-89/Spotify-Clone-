@@ -46,6 +46,7 @@
 console.log("Let's write JS");
 let currentSong = new Audio();
 let songs;
+let currFolder;
 
 
 function secondsToMinutesSeconds(seconds) {
@@ -63,27 +64,54 @@ function secondsToMinutesSeconds(seconds) {
 }
 
 
-async function getSongs() {
-    let a = await fetch("http://127.0.0.1:3000/songs/");
+async function getSongs(folder) {
+    currFolder = folder;
+    let a = await fetch(`http://127.0.0.1:3000/${folder}/`);
     let response = await a.text();
     console.log(response);
     let div = document.createElement("div");
     div.innerHTML = response;
     let as = div.getElementsByTagName("a");
 
-    let songs = [];
+     songs = [];
     for (let index = 0; index < as.length; index++) {
         const element = as[index];
         if (element.href.endsWith(".mp3")) {
-            songs.push(element.href.split("/songs/")[1]);
+            songs.push(element.href.split(`/${folder}/`)[1]);
         }
     }
-    return songs;
+    
+     // Show all the songs in the playlist 
+     let songUL = document.querySelector(".songList").getElementsByTagName("ul")[0];
+     songUL.innerHTML = ""
+     for (const song of songs) {
+         songUL.innerHTML = songUL.innerHTML + `<li> 
+             
+             <img class="invert" src="img/music.svg" alt="">
+             <div class="info">
+                 <div> ${song.replaceAll("%20", " ")}</div>
+                 <div>Artist</div>
+             </div>
+             <div class="playnow">
+                 <span>Play Now</span>
+                 <img class="invert" src="img/play.svg" alt="">
+             </div>
+          </li>`;
+     }
+ 
+     // Attach an event listener to each songs 
+     Array.from(document.querySelector(".songList").getElementsByTagName("li")).forEach(e => {
+         e.addEventListener("click", element => {
+             console.log(e.querySelector(".info").firstElementChild.innerHTML)
+             playMuscie(e.querySelector(".info").firstElementChild.innerHTML.trim())
+         })
+     })
+ 
 }
 
 const playMuscie = (track, pause = false) => {
     // let audio = new Audio("/songs/" + track);
-    currentSong.src = "/songs/" + track;
+    currentSong.src = `/${currFolder}/` + track;
     if (!pause) {
         currentSong.play();
         play.src = "img/pause.svg"
@@ -94,39 +122,12 @@ const playMuscie = (track, pause = false) => {
 
 async function main() {
 
-
-    // Ensure the DOM is ready before running the script
-    // document.addEventListener('DOMContentLoaded', async () => {
     // Get list of all songs
-    songs = await getSongs();
+   await getSongs("songs/BMB");
     playMuscie(songs[0], true)
 
 
-    // Show all the songs in the playlist 
-    let songUL = document.querySelector(".songList").getElementsByTagName("ul")[0];
-    for (const song of songs) {
-        songUL.innerHTML = songUL.innerHTML + `<li> 
-            
-            <img class="invert" src="img/music.svg" alt="">
-            <div class="info">
-                <div> ${song.replaceAll("%20", " ")}</div>
-                <div>Artist</div>
-            </div>
-            <div class="playnow">
-                <span>Play Now</span>
-                <img class="invert" src="img/play.svg" alt="">
-            </div>
-         </li>`;
-    }
-
-    // Attach an event listener to each songs 
-    Array.from(document.querySelector(".songList").getElementsByTagName("li")).forEach(e => {
-        e.addEventListener("click", element => {
-            console.log(e.querySelector(".info").firstElementChild.innerHTML)
-            playMuscie(e.querySelector(".info").firstElementChild.innerHTML.trim())
-        })
-    })
-
+   
     // Event listener to play, pre and new song 
 
     play.addEventListener("click", () => {
@@ -189,10 +190,16 @@ async function main() {
 
     // add an evnt to volume
     document.querySelector(".range").getElementsByTagName("input")[0].addEventListener("change", (e) => {
-        currentSong.volume = parseInt(e.target.value)/100
+        currentSong.volume = parseInt(e.target.value) / 100
     })
 
-
+    // load playlist whenver card is load
+    Array.from(document.getElementsByClassName('card')).forEach(e => {
+        console.log(e)
+        e.addEventListener("click", async item => {
+            songs = await getSongs(`songs/${item.currentTarget.dataset.folder}`)
+        })
+    })
 
 }
 
